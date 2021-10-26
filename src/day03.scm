@@ -46,18 +46,21 @@
 
 
 (define (process-segment
-         update-position
-         record-position
+         segment
          starting-position
          starting-distance
-         segment-len)
-  (let loop ((position starting-position) (steps 0))
-    (if
-      (= steps segment-len)
-      position
-      (let ((updated (update-position position)))
-        (record-position updated (+ starting-distance steps 1))
-        (loop updated (+ steps 1))))))
+         record-position)
+  (let*
+    ((segment-dir (car segment))
+     (segment-len (cdr segment))
+     (update-position (make-update-position-fn segment-dir)))
+    (let loop ((position starting-position) (steps 0))
+      (if
+        (= steps segment-len)
+        (cons position steps)
+        (let ((updated-position (update-position position)))
+          (record-position updated-position (+ starting-distance steps 1))
+          (loop updated-position (+ steps 1)))))))
 
 
 (define (process-wire wire record-position)
@@ -69,16 +72,14 @@
       '()
       (let*
         ((segment (car remaining))
-         (segment-dir (car segment))
-         (segment-len (cdr segment))
-         (update-position (make-update-position-fn segment-dir))
-         (updated-position (process-segment
-                            update-position
-                            record-position
-                            starting-position
-                            starting-distance
-                            segment-len)))
-        (loop (cdr remaining) updated-position (+ starting-distance segment-len))))))
+         (result (process-segment
+                  segment
+                  starting-position
+                  starting-distance
+                  record-position))
+          (updated-position (car result))
+          (updated-distance (+ starting-distance (cdr result))))
+        (loop (cdr remaining) updated-position updated-distance)))))
 
 
 (define (calculate-layout wires)
@@ -87,18 +88,18 @@
     (list-ref wires 0)
     (make-record-position-fn
       layout
-      (lambda (record distance)
-        (if (car record)
-            record
-            (cons distance (cdr record))))))
+      (lambda (entry distance)
+        (if (car entry)
+            entry
+            (cons distance (cdr entry))))))
   (process-wire
     (list-ref wires 1)
     (make-record-position-fn
       layout
-      (lambda (record distance)
-        (if (cdr record)
-            record
-            (cons (car record) distance)))))
+      (lambda (entry distance)
+        (if (cdr entry)
+            entry
+            (cons (car entry) distance)))))
   layout)
 
 
