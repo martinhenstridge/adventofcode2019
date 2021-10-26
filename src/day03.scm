@@ -81,10 +81,6 @@
         (loop (cdr remaining) updated-position (+ starting-distance segment-len))))))
 
 
-(define (manhattan position)
-  (+ (abs (car position)) (abs (cdr position))))
-
-
 (define (calculate-layout wires)
   (define layout (make-hash-table))
   (process-wire
@@ -107,21 +103,23 @@
 
 
 (define (part-one layout)
+  (define (manhattan position)
+    (+ (abs (car position)) (abs (cdr position))))
   (car
     (sort
-      (map
-        manhattan
-        (hash-table-fold layout
-          (lambda (key val acc)
-            (if
-              (and (car val) (cdr val))
-              (cons key acc)
-              acc))
-          '()))
+      (hash-table-fold layout
+        (lambda (key val acc)
+          (if
+            (and (car val) (cdr val))
+            (cons (manhattan key) acc)
+            acc))
+        '())
       <)))
 
 
 (define (part-two layout)
+  (define (combined-distance distances)
+    (+ (car distances) (cdr distances)))
   (car
     (sort
       (hash-table-fold
@@ -129,7 +127,7 @@
         (lambda (key val acc)
           (if
             (and (car val) (cdr val))
-            (cons (+ (car val) (cdr val)) acc)
+            (cons (combined-distance val) acc)
             acc))
         '())
       <)))
