@@ -1,4 +1,4 @@
-#!/usr/local/bin/csi -ss
+#!/usr/local/bin/csi -s
 
 (import (chicken io))
 (import (chicken string))
@@ -70,7 +70,10 @@
 ;(define INPUT '("2,4,4,5,99,0" ""))
 ;(define INPUT '("1,1,1,4,99,5,6,0,99" ""))
 (define INPUT (file->list "data/02.txt"))
-(define (main args)
+(define (main)
   (let ((program (parse-input INPUT)))
     (print (part-one program))   ; 3706713
     (print (part-two program)))) ; 8609
+
+
+(main)

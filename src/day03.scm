@@ -1,4 +1,4 @@
-#!/usr/local/bin/csi -ss
+#!/usr/local/bin/csi -s
 
 (import (chicken io))
 (import (chicken sort))
@@ -138,8 +138,11 @@
 ;(define INPUT '("R75,D30,R83,U83,L12,D49,R71,U7,L72" "U62,R66,U55,R34,D71,R55,D58,R83" ""))
 ;(define INPUT '("R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51" "U98,R91,D20,R16,D67,R40,U7,R15,U6,R7" ""))
 (define INPUT (file->list "data/03.txt"))
-(define (main args)
+(define (main)
   (let ((wires (parse-input INPUT)))
     (let ((layout (calculate-layout wires)))
       (print (part-one layout))    ; 721
       (print (part-two layout))))) ; 7388
+
+
+(main)

@@ -1,4 +1,4 @@
-#!/usr/local/bin/csi -ss
+#!/usr/local/bin/csi -s
 
 (import (chicken io))
 (import srfi-1)
@@ -34,7 +34,10 @@
 
 
 (define INPUT (file->list "data/01.txt"))
-(define (main args)
+(define (main)
   (let ((ms (parse-input INPUT)))
     (print (part-one ms))   ; 3520097
     (print (part-two ms)))) ; 5277255
+
+
+(main)

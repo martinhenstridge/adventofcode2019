@@ -1,4 +1,4 @@
-#!/usr/local/bin/csi -ss
+#!/usr/local/bin/csi -s
 
 (import (chicken string))
 (import srfi-1)
@@ -77,8 +77,11 @@
 
 
 (define INPUT "271973-785961")
-(define (main args)
+(define (main)
   (let ((range (string->range INPUT)))
     (let ((candidates (generate-never-decreasing range)))
-      (print (part-one candidates))     ; 925
-      (print (part-two candidates)))))  ; 607
+      (print (part-one candidates))    ; 925
+      (print (part-two candidates))))) ; 607
+
+
+(main)
