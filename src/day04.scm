@@ -7,89 +7,62 @@
   (map string->number (string-split s "-")))
 
 
-(define (password->digits password)
-  (let loop ((n password) (digits '()))
-    (if
-      (= n 0)
-      digits
-      (loop (quotient n 10) (cons (remainder n 10) digits)))))
-
-
-(define (never-decreasing? password)
-  (let loop ((curr password))
-    (if
-      (= curr 0)
-      #t
-      (let ((next (quotient curr 10)))
-        (if
-          (< (remainder curr 10) (remainder next 10))
-          #f
-          (loop next))))))
-
-
-(define (repeats-atleast-twice? password)
+(define (decreasing? password)
   (let loop ((curr password))
     (if
       (= curr 0)
       #f
       (let ((next (quotient curr 10)))
         (if
-          (= (remainder curr 10) (remainder next 10))
+          (< (remainder curr 10) (remainder next 10))
           #t
           (loop next))))))
 
 
-(define (repeats-exactly-twice? password)
-  (define digits (password->digits password))
+(define (classify-password password)
   (let loop
-    ((head (car digits))
-     (tail (cdr digits))
-     (streak 1))
+    ((curr-digits password)
+     (any-streak #f)
+     (streak-len 1))
     (if
-      (null? tail)
-      (= streak 2)
-      (if
-        (= (car tail) head)
-        (loop (car tail) (cdr tail) (+ 1 streak))
-        (if
-          (= streak 2)
-          #t
-          (loop (car tail) (cdr tail) 1))))))
+      (= curr-digits 0)
+      (cons any-streak (= streak-len 2))
+      (let ((next-digits (quotient curr-digits 10)))
+        (let
+          ((curr-digit (remainder curr-digits 10))
+           (next-digit (remainder next-digits 10)))
+          (if
+            (= curr-digit next-digit)
+            (loop next-digits #t (+ 1 streak-len))
+            (if
+              (= streak-len 2)
+              (cons #t #t)
+              (loop next-digits any-streak 1))))))))
 
 
-(define (count-valid-passwords range valid?)
+(define (count-valid-passwords range)
   (let ((lower (car range))
         (upper (cadr range)))
-    (let loop ((password lower) (count 0))
+    (let loop
+      ((password lower)
+       (count-one 0)
+       (count-two 0))
       (if
         (> password upper)
-        count
+        (cons count-one count-two)
         (if
-          (valid? password)
-          (loop (+ password 1) (+ count 1))
-          (loop (+ password 1) count))))))
-
-
-(define (part-one range)
-  (count-valid-passwords
-   range
-   (lambda (p)
-     (and
-      (never-decreasing? p)
-      (repeats-atleast-twice? p)))))
-
-
-(define (part-two range)
-  (count-valid-passwords
-   range
-   (lambda (p)
-     (and
-      (never-decreasing? p)
-      (repeats-exactly-twice? p)))))
+          (decreasing? password)
+          (loop (+ 1 password) count-one count-two)
+          (let ((info (classify-password password)))
+            (loop
+              (+ 1 password)
+              (+ (if (car info) 1 0) count-one)
+              (+ (if (cdr info) 1 0) count-two))))))))
 
 
 (define INPUT "271973-785961")
 (define (main args)
   (let ((range (string->range INPUT)))
-    (print (part-one range))   ; 925
-    (print (part-two range)))) ; 607
+    (let ((counts (count-valid-passwords range)))
+      (print (car counts))     ; 925
+      (print (cdr counts)))))  ; 607
