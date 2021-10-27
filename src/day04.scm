@@ -7,28 +7,30 @@
   (map string->number (string-split s "-")))
 
 
-(define (number->digits num)
-  (let loop ((n num) (digits '()))
+(define (password->digits password)
+  (let loop ((n password) (digits '()))
     (if
       (= n 0)
       digits
       (loop (quotient n 10) (cons (remainder n 10) digits)))))
 
 
-(define (never-decreasing? digits)
-  (let loop
-    ((head (car digits))
-     (tail (cdr digits)))
+(define (never-decreasing? password)
+  (let loop ((n password))
     (if
-      (null? tail)
+      (= n 0)
       #t
-      (if
-        (< (car tail) head)
-        #f
-        (loop (car tail) (cdr tail))))))
+      (let*
+        ((units (remainder n 10))
+         (tens (/ (remainder (- n units) 100) 10)))
+        (if
+          (< units tens)
+          #f
+          (loop (quotient n 10)))))))
 
 
-(define (repeats-atleast-twice? digits)
+(define (repeats-atleast-twice? password)
+  (define digits (password->digits password))
   (let loop
     ((head (car digits))
      (tail (cdr digits)))
@@ -41,7 +43,8 @@
         (loop (car tail) (cdr tail))))))
 
 
-(define (repeats-exactly-twice? digits)
+(define (repeats-exactly-twice? password)
+  (define digits (password->digits password))
   (let loop
     ((head (car digits))
      (tail (cdr digits))
@@ -72,21 +75,21 @@
 
 
 (define (part-one range)
-  (define (valid-password? password)
-    (let ((digits (number->digits password)))
-      (and
-        (never-decreasing? digits)
-        (repeats-atleast-twice? digits))))
-  (count-valid-passwords range valid-password?))
+  (count-valid-passwords
+   range
+   (lambda (p)
+     (and
+      (never-decreasing? p)
+      (repeats-atleast-twice? p)))))
 
 
 (define (part-two range)
-  (define (valid-password? password)
-    (let ((digits (number->digits password)))
-      (and
-        (never-decreasing? digits)
-        (repeats-exactly-twice? digits))))
-  (count-valid-passwords range valid-password?))
+  (count-valid-passwords
+   range
+   (lambda (p)
+     (and
+      (never-decreasing? p)
+      (repeats-exactly-twice? p)))))
 
 
 (define INPUT "271973-785961")
