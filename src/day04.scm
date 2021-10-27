@@ -16,31 +16,27 @@
 
 
 (define (never-decreasing? password)
-  (let loop ((n password))
+  (let loop ((curr password))
     (if
-      (= n 0)
+      (= curr 0)
       #t
-      (let*
-        ((units (remainder n 10))
-         (tens (/ (remainder (- n units) 100) 10)))
+      (let ((next (quotient curr 10)))
         (if
-          (< units tens)
+          (< (remainder curr 10) (remainder next 10))
           #f
-          (loop (quotient n 10)))))))
+          (loop next))))))
 
 
 (define (repeats-atleast-twice? password)
-  (define digits (password->digits password))
-  (let loop
-    ((head (car digits))
-     (tail (cdr digits)))
+  (let loop ((curr password))
     (if
-      (null? tail)
+      (= curr 0)
       #f
-      (if
-        (= (car tail) head)
-        #t
-        (loop (car tail) (cdr tail))))))
+      (let ((next (quotient curr 10)))
+        (if
+          (= (remainder curr 10) (remainder next 10))
+          #t
+          (loop next))))))
 
 
 (define (repeats-exactly-twice? password)
@@ -64,14 +60,14 @@
 (define (count-valid-passwords range valid?)
   (let ((lower (car range))
         (upper (cadr range)))
-    (let loop ((n lower) (results '()))
+    (let loop ((password lower) (count 0))
       (if
-        (> n upper)
-        (length results)
+        (> password upper)
+        count
         (if
-          (valid? n)
-          (loop (+ n 1) (cons n results))
-          (loop (+ n 1) results))))))
+          (valid? password)
+          (loop (+ password 1) (+ count 1))
+          (loop (+ password 1) count))))))
 
 
 (define (part-one range)
