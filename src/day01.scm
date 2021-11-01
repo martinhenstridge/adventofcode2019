@@ -1,12 +1,12 @@
-#!/usr/local/bin/csi -s
+#!/usr/local/bin/guile -s
+!#
 
-(import (chicken io))
-(import srfi-1)
-(import srfi-13)
+(use-modules (srfi srfi-1))
+(use-modules (ice-9 textual-ports))
 
 
 (define (file->list path)
-  (call-with-input-file path read-lines))
+  (string-split (call-with-input-file path get-string-all) #\newline))
 
 
 (define (parse-input lines)
@@ -26,18 +26,20 @@
 
 
 (define (part-one ms)
-  (foldl + 0 (map mass->fuel ms)))
+  (fold + 0 (map mass->fuel ms)))
 
 
 (define (part-two ms)
-  (foldl + 0 (map combined-mass->fuel ms)))
+  (fold + 0 (map combined-mass->fuel ms)))
 
 
 (define INPUT (file->list "data/01.txt"))
 (define (main)
   (let ((ms (parse-input INPUT)))
-    (print (part-one ms))   ; 3520097
-    (print (part-two ms)))) ; 5277255
+    (display (part-one ms)) ; 3520097
+    (newline)
+    (display (part-two ms)) ; 5277255
+    (newline)))
 
 
 (main)

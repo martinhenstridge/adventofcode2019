@@ -1,19 +1,15 @@
-#!/usr/local/bin/csi -s
+#!/usr/local/bin/guile -s
+!#
 
-(import (chicken io))
-(import (chicken string))
-(import srfi-1)
-(import srfi-13)
-(import srfi-48)
-(import vector-lib)
+(use-modules (ice-9 textual-ports))
 
 
 (define (file->list path)
-  (call-with-input-file path read-lines))
+  (string-split (call-with-input-file path get-string-all) #\newline))
 
 
 (define (parse-input lines)
-  (list->vector (map string->number (string-split (car lines) ","))))
+  (list->vector (map string->number (string-split (car lines) #\,))))
 
 
 (define (run-intcode program noun verb)
@@ -72,8 +68,10 @@
 (define INPUT (file->list "data/02.txt"))
 (define (main)
   (let ((program (parse-input INPUT)))
-    (print (part-one program))   ; 3706713
-    (print (part-two program)))) ; 8609
+    (display (part-one program)) ; 3706713
+    (newline)
+    (display (part-two program)) ; 8609
+    (newline)))
 
 
 (main)

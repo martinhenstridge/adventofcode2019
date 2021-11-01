@@ -1,11 +1,9 @@
-#!/usr/local/bin/csi -s
-
-(import (chicken string))
-(import srfi-1)
+#!/usr/local/bin/guile -s
+!#
 
 
 (define (string->range s)
-  (map string->number (string-split s "-")))
+  (map string->number (string-split s #\-)))
 
 
 (define (decreasing? password)
@@ -80,8 +78,10 @@
 (define (main)
   (let ((range (string->range INPUT)))
     (let ((candidates (generate-never-decreasing range)))
-      (print (part-one candidates))    ; 925
-      (print (part-two candidates))))) ; 607
+      (display (part-one candidates)) ; 925
+      (newline)
+      (display (part-two candidates)) ; 607
+      (newline))))
 
 
 (main)

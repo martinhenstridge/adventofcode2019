@@ -1,17 +1,13 @@
-#!/usr/local/bin/csi -s
+#!/usr/local/bin/guile -s
+!#
 
-(import (chicken io))
-(import (chicken sort))
-(import (chicken string))
-(import (chicken bitwise))
-(import srfi-1)
-(import srfi-13)
-(import srfi-48)
-(import srfi-69)
+(use-modules (ice-9 textual-ports))
+(use-modules (srfi srfi-1))
+(use-modules (srfi srfi-69))
 
 
 (define (file->list path)
-  (call-with-input-file path read-lines))
+  (string-split (call-with-input-file path get-string-all) #\newline))
 
 
 (define (string->wire line)
@@ -20,7 +16,7 @@
       (cons
         (string-take s 1)
         (string->number (string-drop s 1))))
-    (string-split line ",")))
+    (string-split line #\,)))
 
 
 (define (parse-input lines)
@@ -141,8 +137,10 @@
 (define (main)
   (let ((wires (parse-input INPUT)))
     (let ((layout (calculate-layout wires)))
-      (print (part-one layout))    ; 721
-      (print (part-two layout))))) ; 7388
+      (display (part-one layout)) ; 721
+      (newline)
+      (display (part-two layout)) ; 7388
+      (newline))))
 
 
 (main)
