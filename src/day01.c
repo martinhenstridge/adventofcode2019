@@ -1,9 +1,7 @@
-#include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "util.h"
 
 
 static int
@@ -29,10 +27,9 @@ extra_fuel_requirement(int mass)
 }
 
 
-int
-main(int argc, char **argv)
+void
+solve01(const char *input)
 {
-    char *input = read_file("data/01.txt");
     int mass, total;
     char *tokstr;
 
@@ -51,8 +48,6 @@ main(int argc, char **argv)
         mass = strtol(tok, NULL, 10);
         total += extra_fuel_requirement(mass);
     }
-    printf("[02/1] %i\n", total);
+    printf("[01/2] %i\n", total);
     free(tokstr);
-
-    free(input);
 }
