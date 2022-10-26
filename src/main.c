@@ -1,13 +1,22 @@
 #include <stdlib.h>
-#include "day01.h"
 #include "util.h"
+
+void solve01(const char *input);
+void solve02(const char *input);
+
 
 int
 main(int argc, char **argv)
 {
-    char *input01 = read_file("data/01.txt");
-    solve01(input01);
-    free(input01);
+    char *input;
+
+    input = read_file("data/01.txt");
+    solve01(input);
+    free(input);
+
+    input = read_file("data/02.txt");
+    solve02(input);
+    free(input);
 
     return EXIT_SUCCESS;
 }
