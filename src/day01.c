@@ -12,7 +12,7 @@ fuel_requirement(int mass)
 
 
 static int
-extra_fuel_requirement(int mass)
+recursive_fuel_requirement(int mass)
 {
     int total = 0;
     while (true) {
@@ -27,27 +27,43 @@ extra_fuel_requirement(int mass)
 }
 
 
-void
-solve01(const char *input)
+static int
+total_naive(const char *input)
 {
-    int mass, total;
-    char *tokstr;
+    int total = 0;
+    int mass;
 
-    total = 0;
-    tokstr = strdup(input);
+    char *tokstr = strdup(input);
     for (char *tok = strtok(tokstr, "\n"); tok != NULL; tok = strtok(NULL, "\n")) {
         mass = strtol(tok, NULL, 10);
         total += fuel_requirement(mass);
     }
-    printf("[01/1] %i\n", total);
     free(tokstr);
 
-    total = 0;
-    tokstr = strdup(input);
+    return total;
+}
+
+
+static int
+total_recursive(const char *input)
+{
+    int total = 0;
+    int mass;
+
+    char *tokstr = strdup(input);
     for (char *tok = strtok(tokstr, "\n"); tok != NULL; tok = strtok(NULL, "\n")) {
         mass = strtol(tok, NULL, 10);
-        total += extra_fuel_requirement(mass);
+        total += recursive_fuel_requirement(mass);
     }
-    printf("[01/2] %i\n", total);
     free(tokstr);
+
+    return total;
+}
+
+
+void
+solve01(const char *input)
+{
+    printf("[01/1] %i\n", total_naive(input));
+    printf("[01/2] %i\n", total_recursive(input));
 }
