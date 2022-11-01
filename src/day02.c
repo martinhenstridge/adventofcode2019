@@ -9,11 +9,11 @@
 static int
 run_noun_verb(IntcodeProgram *program, int noun, int verb)
 {
-    init_program(program);
+    intcode_reset(program);
     program->memory[1] = noun;
     program->memory[2] = verb;
 
-    run_program(program);
+    intcode_run(program);
     return program->memory[0];
 }
 
@@ -37,7 +37,7 @@ search_noun_verb(IntcodeProgram *program, int goal)
 void
 solve02(const char *input)
 {
-    IntcodeProgram program = read_program(input);
+    IntcodeProgram program = intcode_create(input);
 
     printf("[02/1] %i\n", run_noun_verb(&program, 12, 2));
     printf("[02/2] %i\n", search_noun_verb(&program, 19690720));

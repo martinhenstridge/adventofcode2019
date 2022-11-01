@@ -1,10 +1,30 @@
 #include <assert.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "intcode.h"
+
+
+typedef enum {
+    OPCODE_ADD           = 1,
+    OPCODE_MULTIPLY      = 2,
+    OPCODE_INPUT         = 3,
+    OPCODE_OUTPUT        = 4,
+    OPCODE_JUMP_IF_TRUE  = 5,
+    OPCODE_JUMP_IF_FALSE = 6,
+    OPCODE_LESS_THAN     = 7,
+    OPCODE_EQUALS        = 8,
+    OPCODE_EXIT          = 99,
+} Opcode;
+
+
+typedef enum {
+    MODE_POSITION = 0,
+    MODE_IMMEDIATE = 1,
+} ParameterMode;
 
 
 static Opcode
@@ -30,7 +50,7 @@ decode_opcode(int encoded, ParameterMode *modes)
 
 
 static size_t
-get_param_addr(ParameterMode mode, int *memory, size_t ptr)
+decode_address(ParameterMode mode, int *memory, size_t ptr)
 {
     switch (mode) {
     case MODE_POSITION:
@@ -44,10 +64,38 @@ get_param_addr(ParameterMode mode, int *memory, size_t ptr)
 }
 
 
-IntcodeProgram
-read_program(const char *input)
+static void
+enqueue_input(IntcodeProgram *program, IntcodeInput *input)
 {
-    IntcodeProgram program;
+    IntcodeInput **entry = &program->input;
+    while (*entry != NULL) {
+        entry = &(*entry)->next;
+    }
+    *entry = input;
+}
+
+
+static IntcodeInput *
+dequeue_input(IntcodeProgram *program)
+{
+    IntcodeInput *input;
+
+    if (program->input == NULL) {
+        return NULL;
+    }
+
+    input = program->input;
+    program->input = input->next;
+    input->next = NULL;
+
+    return input;
+}
+
+
+IntcodeProgram
+intcode_create(const char *input)
+{
+    IntcodeProgram program = {};
 
     size_t ccount = 1;
     size_t icount = 1;
@@ -78,86 +126,121 @@ read_program(const char *input)
 }
 
 
-void
-init_program(IntcodeProgram *program)
+IntcodeProgram
+intcode_copy(IntcodeProgram *program)
 {
-    memcpy(program->memory, program->instructions, sizeof(int) * program->length);
+    IntcodeProgram copy = {};
+    size_t bytes;
+
+    copy.length = program->length;
+    bytes = sizeof(int) * copy.length;
+
+    copy.instructions = malloc(bytes);
+    assert(copy.instructions != NULL);
+    memcpy(copy.instructions, program->instructions, bytes);
+
+    copy.memory = malloc(bytes);
+    assert(copy.memory != NULL);
+
+    return copy;
 }
 
 
 void
-run_program(IntcodeProgram *program)
+intcode_reset(IntcodeProgram *program)
 {
-    int output;
+    program->status = STATUS_READY;
+    memcpy(program->memory, program->instructions, sizeof(int) * program->length);
+    while (program->input != NULL) {
+        free(dequeue_input(program));
+    }
+    program->input = NULL;
+    program->ip = 0;
+}
+
+
+void
+intcode_run(IntcodeProgram *program)
+{
     int *memory = program->memory;
-    size_t ip = 0;
+    size_t ip;
 
     Opcode opcode;
     ParameterMode modes[3];
 
     while (true) {
+        ip = program->ip;
         opcode = decode_opcode(memory[ip], modes);
 
         switch (opcode) {
         case OPCODE_ADD:
             {
                 assert(modes[2] != MODE_IMMEDIATE);
-                size_t p1 = get_param_addr(modes[0], memory, ip + 1);
-                size_t p2 = get_param_addr(modes[1], memory, ip + 2);
-                size_t p3 = get_param_addr(modes[2], memory, ip + 3);
-                memory[p3] = memory[p1] + memory[p2];
-                ip += 4;
+                size_t a1 = decode_address(modes[0], memory, ip + 1);
+                size_t a2 = decode_address(modes[1], memory, ip + 2);
+                size_t a3 = decode_address(modes[2], memory, ip + 3);
+                memory[a3] = memory[a1] + memory[a2];
+                program->ip += 4;
             }
             break;
 
         case OPCODE_MULTIPLY:
             {
                 assert(modes[2] != MODE_IMMEDIATE);
-                size_t p1 = get_param_addr(modes[0], memory, ip + 1);
-                size_t p2 = get_param_addr(modes[1], memory, ip + 2);
-                size_t p3 = get_param_addr(modes[2], memory, ip + 3);
-                memory[p3] = memory[p1] * memory[p2];
-                ip += 4;
+                size_t a1 = decode_address(modes[0], memory, ip + 1);
+                size_t a2 = decode_address(modes[1], memory, ip + 2);
+                size_t a3 = decode_address(modes[2], memory, ip + 3);
+                memory[a3] = memory[a1] * memory[a2];
+                program->ip += 4;
             }
             break;
 
         case OPCODE_INPUT:
             {
                 assert(modes[0] != MODE_IMMEDIATE);
-                size_t p1 = get_param_addr(modes[0], memory, ip + 1);
-                memory[p1] = program->input;
-                ip += 2;
+                IntcodeInput *input;
+                input = dequeue_input(program);
+                if (input == NULL) {
+                    program->status = STATUS_INPUT_REQUIRED;
+                    return;
+                }
+                size_t a1 = decode_address(modes[0], memory, ip + 1);
+                memory[a1] = input->value;
+                free(input);
+                program->ip += 2;
             }
             break;
 
         case OPCODE_OUTPUT:
             {
-                size_t p1 = get_param_addr(modes[0], memory, ip + 1);
-                program->output = memory[p1];
-                ip += 2;
+                size_t a1 = decode_address(modes[0], memory, ip + 1);
+                program->output = memory[a1];
+                program->ip += 2;
+                program->status = STATUS_OUTPUT_AVAILABLE;
+                return;
             }
             break;
 
         case OPCODE_JUMP_IF_TRUE:
             {
-                size_t p1 = get_param_addr(modes[0], memory, ip + 1);
-                size_t p2 = get_param_addr(modes[1], memory, ip + 2);
-                if (memory[p1] != 0) {
-                    ip = memory[p2];
+                size_t a1 = decode_address(modes[0], memory, ip + 1);
+                size_t a2 = decode_address(modes[1], memory, ip + 2);
+                if (memory[a1] != 0) {
+                    program->ip = memory[a2];
                 } else {
-                    ip += 3;
+                    program->ip += 3;
                 }
             }
             break;
 
         case OPCODE_JUMP_IF_FALSE:
             {
-                size_t p1 = get_param_addr(modes[0], memory, ip + 1);
-                size_t p2 = get_param_addr(modes[1], memory, ip + 2);
-                if (memory[p1] == 0) {
-                    ip = memory[p2];
+                size_t a1 = decode_address(modes[0], memory, ip + 1);
+                size_t a2 = decode_address(modes[1], memory, ip + 2);
+                if (memory[a1] == 0) {
+                    program->ip = memory[a2];
                 } else {
-                    ip += 3;
+                    program->ip += 3;
                 }
             }
             break;
@@ -165,34 +248,35 @@ run_program(IntcodeProgram *program)
         case OPCODE_LESS_THAN:
             {
                 assert(modes[2] != MODE_IMMEDIATE);
-                size_t p1 = get_param_addr(modes[0], memory, ip + 1);
-                size_t p2 = get_param_addr(modes[1], memory, ip + 2);
-                size_t p3 = get_param_addr(modes[2], memory, ip + 3);
-                if (memory[p1] < memory[p2]) {
-                    memory[p3] = 1;
+                size_t a1 = decode_address(modes[0], memory, ip + 1);
+                size_t a2 = decode_address(modes[1], memory, ip + 2);
+                size_t a3 = decode_address(modes[2], memory, ip + 3);
+                if (memory[a1] < memory[a2]) {
+                    memory[a3] = 1;
                 } else {
-                    memory[p3] = 0;
+                    memory[a3] = 0;
                 }
-                ip += 4;
+                program->ip += 4;
             }
             break;
 
         case OPCODE_EQUALS:
             {
                 assert(modes[2] != MODE_IMMEDIATE);
-                size_t p1 = get_param_addr(modes[0], memory, ip + 1);
-                size_t p2 = get_param_addr(modes[1], memory, ip + 2);
-                size_t p3 = get_param_addr(modes[2], memory, ip + 3);
-                if (memory[p1] == memory[p2]) {
-                    memory[p3] = 1;
+                size_t a1 = decode_address(modes[0], memory, ip + 1);
+                size_t a2 = decode_address(modes[1], memory, ip + 2);
+                size_t a3 = decode_address(modes[2], memory, ip + 3);
+                if (memory[a1] == memory[a2]) {
+                    memory[a3] = 1;
                 } else {
-                    memory[p3] = 0;
+                    memory[a3] = 0;
                 }
-                ip += 4;
+                program->ip += 4;
             }
             break;
 
         case OPCODE_EXIT:
+            program->status = STATUS_COMPLETE;
             return;
 
         default:
@@ -204,7 +288,20 @@ run_program(IntcodeProgram *program)
 
 
 void
-dump_program(IntcodeProgram *program)
+intcode_send_input(IntcodeProgram *program, int value)
+{
+    IntcodeInput *input = malloc(sizeof(*input));
+    assert(input != NULL);
+
+    input->next = NULL;
+    input->value = value;
+
+    enqueue_input(program, input);
+}
+
+
+void
+intcode_dump(IntcodeProgram *program)
 {
     for (size_t i = 0; i < program->length; i++) {
         printf("[%zu] %i %i\n", i, program->instructions[i], program->memory[i]);

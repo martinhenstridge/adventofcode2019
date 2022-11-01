@@ -4,33 +4,32 @@
 #include <stdlib.h>
 
 typedef enum {
-    OPCODE_ADD           = 1,
-    OPCODE_MULTIPLY      = 2,
-    OPCODE_INPUT         = 3,
-    OPCODE_OUTPUT        = 4,
-    OPCODE_JUMP_IF_TRUE  = 5,
-    OPCODE_JUMP_IF_FALSE = 6,
-    OPCODE_LESS_THAN     = 7,
-    OPCODE_EQUALS        = 8,
-    OPCODE_EXIT          = 99,
-} Opcode;
+    STATUS_READY = 0,
+    STATUS_COMPLETE = 1,
+    STATUS_INPUT_REQUIRED = 2,
+    STATUS_OUTPUT_AVAILABLE = 3,
+} IntcodeStatus;
 
-typedef enum {
-    MODE_POSITION = 0,
-    MODE_IMMEDIATE = 1,
-} ParameterMode;
+typedef struct Input_ {
+    struct Input_ *next;
+    int value;
+} IntcodeInput;
 
 typedef struct {
+    IntcodeStatus status;
     size_t length;
+    size_t ip;
     int *instructions;
     int *memory;
-    int input;
+    IntcodeInput *input;
     int output;
 } IntcodeProgram;
 
-IntcodeProgram read_program(const char *input);
-void init_program(IntcodeProgram *program);
-void run_program(IntcodeProgram *program);
-void dump_program(IntcodeProgram *program);
+IntcodeProgram intcode_create(const char *input);
+IntcodeProgram intcode_copy(IntcodeProgram *program);
+void intcode_reset(IntcodeProgram *program);
+void intcode_run(IntcodeProgram *program);
+void intcode_send_input(IntcodeProgram *program, int value);
+void intcode_dump(IntcodeProgram *program);
 
 #endif
