@@ -6,8 +6,9 @@ void solve02(const char *input);
 void solve03(const char *input);
 void solve04(const char *input);
 void solve05(const char *input);
-void solve07(const char *input);
 void solve06(const char *input);
+void solve07(const char *input);
+void solve08(const char *input);
 
 
 typedef void (*Solver)(const char *);
@@ -25,6 +26,7 @@ static const Day days[] = {
     { solve05, "data/05.txt" },
     { solve06, "data/06.txt" },
     { solve07, "data/07.txt" },
+    { solve08, "data/08.txt" },
 };
 
 static const size_t num_days = sizeof(days) / sizeof(*days);
