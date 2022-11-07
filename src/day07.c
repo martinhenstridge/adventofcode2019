@@ -1,15 +1,16 @@
 #include <assert.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "intcode.h"
 
 
-static int
-run_linear(IntcodeProgram *program, int *settings)
+static int64_t
+run_linear(IntcodeProgram *program, int64_t *settings)
 {
-    int output = 0;
+    int64_t output = 0;
 
     for (size_t i = 0; i < 5; i++) {
         intcode_reset(program);
@@ -23,11 +24,11 @@ run_linear(IntcodeProgram *program, int *settings)
 }
 
 
-static int
-run_feedback(IntcodeProgram *amplifiers, int *settings)
+static int64_t
+run_feedback(IntcodeProgram *amplifiers, int64_t *settings)
 {
-    int output = 0;
-    int result = 0;
+    int64_t output = 0;
+    int64_t result = 0;
 
     for (uint i = 0; i < 5; i++) {
         intcode_reset(&amplifiers[i]);
@@ -57,12 +58,12 @@ run_feedback(IntcodeProgram *amplifiers, int *settings)
 }
 
 
-static int
+static int64_t
 find_max_linear(IntcodeProgram *program)
 {
-    int max = 0;
-    int output;
-    int settings[5];
+    int64_t max = 0;
+    int64_t output;
+    int64_t settings[5];
 
     for (uint a = 0; a < 5; a++) {
         for (uint b = 0; b < 5; b++) {
@@ -92,12 +93,12 @@ find_max_linear(IntcodeProgram *program)
 }
 
 
-static int
+static int64_t
 find_max_feedback(IntcodeProgram *program)
 {
-    int max = 0;
-    int output;
-    int settings[5];
+    int64_t max = 0;
+    int64_t output;
+    int64_t settings[5];
     IntcodeProgram amplifiers[5];
 
     for (uint i = 0; i < 5; i++) {
@@ -137,6 +138,6 @@ solve07(const char *input)
 {
     IntcodeProgram program = intcode_create(input);
 
-    printf("[07/1] %i\n", find_max_linear(&program));
-    printf("[07/2] %i\n", find_max_feedback(&program));
+    printf("[07/1] %li\n", find_max_linear(&program));
+    printf("[07/2] %li\n", find_max_feedback(&program));
 }

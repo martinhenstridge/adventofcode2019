@@ -3,7 +3,7 @@ CC = cc
 SRCDIR = src
 INCDIR = src
 
-CFLAGS = -I$(INCDIR) -O2 -ggdb
+CFLAGS = -I$(INCDIR) -O0 -ggdb
 
 SRCS := $(wildcard $(SRCDIR)/*.c)
 HDRS := $(wildcard $(INCDIR)/*.h)

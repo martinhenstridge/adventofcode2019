@@ -1,12 +1,13 @@
 #include <assert.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "intcode.h"
 
 
-static int
-run_to_completion(IntcodeProgram *program, int input)
+static int64_t
+run_to_completion(IntcodeProgram *program, int64_t input)
 {
     intcode_reset(program);
     intcode_send_input(program, input);
@@ -23,9 +24,9 @@ solve05(const char *input)
 {
     IntcodeProgram program = intcode_create(input);
 
-    int diagnostic1 = run_to_completion(&program, 1);
-    int diagnostic5 = run_to_completion(&program, 5);
+    int64_t diagnostic1 = run_to_completion(&program, 1);
+    int64_t diagnostic5 = run_to_completion(&program, 5);
 
-    printf("[05/1] %i\n", diagnostic1);
-    printf("[05/2] %i\n", diagnostic5);
+    printf("[05/1] %li\n", diagnostic1);
+    printf("[05/2] %li\n", diagnostic5);
 }

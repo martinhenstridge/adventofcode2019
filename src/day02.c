@@ -1,13 +1,14 @@
 #include <assert.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "intcode.h"
 
 
-static int
-run_noun_verb(IntcodeProgram *program, int noun, int verb)
+static int64_t
+run_noun_verb(IntcodeProgram *program, int64_t noun, int64_t verb)
 {
     intcode_reset(program);
     program->memory[1] = noun;
@@ -18,12 +19,12 @@ run_noun_verb(IntcodeProgram *program, int noun, int verb)
 }
 
 
-static int
-search_noun_verb(IntcodeProgram *program, int goal)
+static int64_t
+search_noun_verb(IntcodeProgram *program, int64_t goal)
 {
-    int output;
-    for (int noun = 0; noun < 100; noun++) {
-        for (int verb = 0; verb < 100; verb++) {
+    int64_t output;
+    for (int64_t noun = 0; noun < 100; noun++) {
+        for (int64_t verb = 0; verb < 100; verb++) {
             output = run_noun_verb(program, noun, verb);
             if (output == goal) {
                 return 100 * noun + verb;
@@ -39,6 +40,6 @@ solve02(const char *input)
 {
     IntcodeProgram program = intcode_create(input);
 
-    printf("[02/1] %i\n", run_noun_verb(&program, 12, 2));
-    printf("[02/2] %i\n", search_noun_verb(&program, 19690720));
+    printf("[02/1] %li\n", run_noun_verb(&program, 12, 2));
+    printf("[02/2] %li\n", search_noun_verb(&program, 19690720));
 }

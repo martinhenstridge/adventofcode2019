@@ -9,26 +9,28 @@
 
 
 typedef enum {
-    OPCODE_ADD           = 1,
-    OPCODE_MULTIPLY      = 2,
-    OPCODE_INPUT         = 3,
-    OPCODE_OUTPUT        = 4,
-    OPCODE_JUMP_IF_TRUE  = 5,
-    OPCODE_JUMP_IF_FALSE = 6,
-    OPCODE_LESS_THAN     = 7,
-    OPCODE_EQUALS        = 8,
-    OPCODE_EXIT          = 99,
+    OPCODE_ADD            =  1,
+    OPCODE_MULTIPLY       =  2,
+    OPCODE_INPUT          =  3,
+    OPCODE_OUTPUT         =  4,
+    OPCODE_JUMP_IF_TRUE   =  5,
+    OPCODE_JUMP_IF_FALSE  =  6,
+    OPCODE_LESS_THAN      =  7,
+    OPCODE_EQUALS         =  8,
+    OPCODE_ADJUST_RELBASE =  9,
+    OPCODE_EXIT           = 99,
 } Opcode;
 
 
 typedef enum {
     MODE_POSITION = 0,
     MODE_IMMEDIATE = 1,
+    MODE_RELATIVE = 2,
 } ParameterMode;
 
 
 static Opcode
-decode_opcode(int encoded, ParameterMode *modes)
+decode_opcode(int64_t encoded, ParameterMode *modes)
 {
     assert(encoded > 0);
     uint digits = (uint)encoded;
@@ -50,13 +52,15 @@ decode_opcode(int encoded, ParameterMode *modes)
 
 
 static size_t
-decode_address(ParameterMode mode, int *memory, size_t ptr)
+decode_address(ParameterMode mode, int64_t *memory, size_t ptr)
 {
     switch (mode) {
     case MODE_POSITION:
         return memory[ptr];
     case MODE_IMMEDIATE:
         return ptr;
+    case MODE_RELATIVE:
+        return 0;
     default:
         printf("Bad parameter mode: %u\n", mode);
         assert(false);
@@ -109,16 +113,16 @@ intcode_create(const char *input)
     }
 
     program.length = icount;
-    program.instructions = malloc(sizeof(int) * icount);
+    program.instructions = malloc(sizeof(int64_t) * icount);
     assert(program.instructions != NULL);
-    program.memory = malloc(sizeof(int) * icount);
+    program.memory = malloc(sizeof(int64_t) * icount);
     assert(program.memory != NULL);
 
     char *copy = malloc(ccount);
     memcpy(copy, input, ccount);
     i = 0;
     for (char *tok = strtok(copy, ","); tok != NULL; tok = strtok(NULL, ",")) {
-        program.instructions[i++] = strtol(tok, NULL, 10);
+        program.instructions[i++] = strtoll(tok, NULL, 10);
     }
     free(copy);
 
@@ -133,7 +137,7 @@ intcode_copy(IntcodeProgram *program)
     size_t bytes;
 
     copy.length = program->length;
-    bytes = sizeof(int) * copy.length;
+    bytes = sizeof(int64_t) * copy.length;
 
     copy.instructions = malloc(bytes);
     assert(copy.instructions != NULL);
@@ -150,19 +154,22 @@ void
 intcode_reset(IntcodeProgram *program)
 {
     program->status = STATUS_READY;
-    memcpy(program->memory, program->instructions, sizeof(int) * program->length);
+    memcpy(program->memory,
+           program->instructions,
+           sizeof(int64_t) * program->length);
     while (program->input != NULL) {
         free(dequeue_input(program));
     }
     program->input = NULL;
     program->ip = 0;
+    program->rb = 0;
 }
 
 
 void
 intcode_run(IntcodeProgram *program)
 {
-    int *memory = program->memory;
+    int64_t *memory = program->memory;
     size_t ip;
 
     Opcode opcode;
@@ -275,6 +282,14 @@ intcode_run(IntcodeProgram *program)
             }
             break;
 
+        case OPCODE_ADJUST_RELBASE:
+            {
+                size_t a1 = decode_address(modes[0], memory, ip + 1);
+                program->rb += memory[a1];
+                program->ip += 2;
+            }
+            break;
+
         case OPCODE_EXIT:
             program->status = STATUS_COMPLETE;
             return;
@@ -288,7 +303,7 @@ intcode_run(IntcodeProgram *program)
 
 
 void
-intcode_send_input(IntcodeProgram *program, int value)
+intcode_send_input(IntcodeProgram *program, int64_t value)
 {
     IntcodeInput *input = malloc(sizeof(*input));
     assert(input != NULL);
@@ -304,6 +319,6 @@ void
 intcode_dump(IntcodeProgram *program)
 {
     for (size_t i = 0; i < program->length; i++) {
-        printf("[%zu] %i %i\n", i, program->instructions[i], program->memory[i]);
+        printf("[%zu] %li %li\n", i, program->instructions[i], program->memory[i]);
     }
 }
