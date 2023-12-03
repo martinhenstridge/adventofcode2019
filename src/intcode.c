@@ -7,6 +7,8 @@
 
 #include "intcode.h"
 
+#define MEMORY_SIZE (1 << 16)
+
 
 typedef enum {
     OPCODE_ADD            =  1,
@@ -52,7 +54,7 @@ decode_opcode(int64_t encoded, ParameterMode *modes)
 
 
 static size_t
-decode_address(ParameterMode mode, int64_t *memory, size_t ptr)
+decode_address(ParameterMode mode, int64_t *memory, size_t base, size_t ptr)
 {
     switch (mode) {
     case MODE_POSITION:
@@ -60,7 +62,7 @@ decode_address(ParameterMode mode, int64_t *memory, size_t ptr)
     case MODE_IMMEDIATE:
         return ptr;
     case MODE_RELATIVE:
-        return 0;
+        return memory[ptr] + base;
     default:
         printf("Bad parameter mode: %u\n", mode);
         assert(false);
@@ -115,7 +117,7 @@ intcode_create(const char *input)
     program.length = icount;
     program.instructions = malloc(sizeof(int64_t) * icount);
     assert(program.instructions != NULL);
-    program.memory = malloc(sizeof(int64_t) * icount);
+    program.memory = malloc(sizeof(int64_t) * MEMORY_SIZE);
     assert(program.memory != NULL);
 
     char *copy = malloc(ccount);
@@ -134,16 +136,16 @@ IntcodeProgram
 intcode_copy(IntcodeProgram *program)
 {
     IntcodeProgram copy = {};
-    size_t bytes;
+    size_t copy_bytes;
 
     copy.length = program->length;
-    bytes = sizeof(int64_t) * copy.length;
+    copy_bytes = sizeof(int64_t) * copy.length;
 
-    copy.instructions = malloc(bytes);
+    copy.instructions = malloc(copy_bytes);
     assert(copy.instructions != NULL);
-    memcpy(copy.instructions, program->instructions, bytes);
+    memcpy(copy.instructions, program->instructions, copy_bytes);
 
-    copy.memory = malloc(bytes);
+    copy.memory = malloc(sizeof(int64_t) * MEMORY_SIZE);
     assert(copy.memory != NULL);
 
     return copy;
@@ -154,6 +156,7 @@ void
 intcode_reset(IntcodeProgram *program)
 {
     program->status = STATUS_READY;
+    memset(program->memory, 0, sizeof(int64_t) * MEMORY_SIZE);
     memcpy(program->memory,
            program->instructions,
            sizeof(int64_t) * program->length);
@@ -170,6 +173,7 @@ void
 intcode_run(IntcodeProgram *program)
 {
     int64_t *memory = program->memory;
+    size_t rb;
     size_t ip;
 
     Opcode opcode;
@@ -177,15 +181,16 @@ intcode_run(IntcodeProgram *program)
 
     while (true) {
         ip = program->ip;
+        rb = program->rb;
         opcode = decode_opcode(memory[ip], modes);
 
         switch (opcode) {
         case OPCODE_ADD:
             {
                 assert(modes[2] != MODE_IMMEDIATE);
-                size_t a1 = decode_address(modes[0], memory, ip + 1);
-                size_t a2 = decode_address(modes[1], memory, ip + 2);
-                size_t a3 = decode_address(modes[2], memory, ip + 3);
+                size_t a1 = decode_address(modes[0], memory, rb, ip + 1);
+                size_t a2 = decode_address(modes[1], memory, rb, ip + 2);
+                size_t a3 = decode_address(modes[2], memory, rb, ip + 3);
                 memory[a3] = memory[a1] + memory[a2];
                 program->ip += 4;
             }
@@ -194,9 +199,9 @@ intcode_run(IntcodeProgram *program)
         case OPCODE_MULTIPLY:
             {
                 assert(modes[2] != MODE_IMMEDIATE);
-                size_t a1 = decode_address(modes[0], memory, ip + 1);
-                size_t a2 = decode_address(modes[1], memory, ip + 2);
-                size_t a3 = decode_address(modes[2], memory, ip + 3);
+                size_t a1 = decode_address(modes[0], memory, rb, ip + 1);
+                size_t a2 = decode_address(modes[1], memory, rb, ip + 2);
+                size_t a3 = decode_address(modes[2], memory, rb, ip + 3);
                 memory[a3] = memory[a1] * memory[a2];
                 program->ip += 4;
             }
@@ -211,7 +216,7 @@ intcode_run(IntcodeProgram *program)
                     program->status = STATUS_INPUT_REQUIRED;
                     return;
                 }
-                size_t a1 = decode_address(modes[0], memory, ip + 1);
+                size_t a1 = decode_address(modes[0], memory, rb, ip + 1);
                 memory[a1] = input->value;
                 free(input);
                 program->ip += 2;
@@ -220,7 +225,7 @@ intcode_run(IntcodeProgram *program)
 
         case OPCODE_OUTPUT:
             {
-                size_t a1 = decode_address(modes[0], memory, ip + 1);
+                size_t a1 = decode_address(modes[0], memory, rb, ip + 1);
                 program->output = memory[a1];
                 program->ip += 2;
                 program->status = STATUS_OUTPUT_AVAILABLE;
@@ -230,8 +235,8 @@ intcode_run(IntcodeProgram *program)
 
         case OPCODE_JUMP_IF_TRUE:
             {
-                size_t a1 = decode_address(modes[0], memory, ip + 1);
-                size_t a2 = decode_address(modes[1], memory, ip + 2);
+                size_t a1 = decode_address(modes[0], memory, rb, ip + 1);
+                size_t a2 = decode_address(modes[1], memory, rb, ip + 2);
                 if (memory[a1] != 0) {
                     program->ip = memory[a2];
                 } else {
@@ -242,8 +247,8 @@ intcode_run(IntcodeProgram *program)
 
         case OPCODE_JUMP_IF_FALSE:
             {
-                size_t a1 = decode_address(modes[0], memory, ip + 1);
-                size_t a2 = decode_address(modes[1], memory, ip + 2);
+                size_t a1 = decode_address(modes[0], memory, rb, ip + 1);
+                size_t a2 = decode_address(modes[1], memory, rb, ip + 2);
                 if (memory[a1] == 0) {
                     program->ip = memory[a2];
                 } else {
@@ -255,9 +260,9 @@ intcode_run(IntcodeProgram *program)
         case OPCODE_LESS_THAN:
             {
                 assert(modes[2] != MODE_IMMEDIATE);
-                size_t a1 = decode_address(modes[0], memory, ip + 1);
-                size_t a2 = decode_address(modes[1], memory, ip + 2);
-                size_t a3 = decode_address(modes[2], memory, ip + 3);
+                size_t a1 = decode_address(modes[0], memory, rb, ip + 1);
+                size_t a2 = decode_address(modes[1], memory, rb, ip + 2);
+                size_t a3 = decode_address(modes[2], memory, rb, ip + 3);
                 if (memory[a1] < memory[a2]) {
                     memory[a3] = 1;
                 } else {
@@ -270,9 +275,9 @@ intcode_run(IntcodeProgram *program)
         case OPCODE_EQUALS:
             {
                 assert(modes[2] != MODE_IMMEDIATE);
-                size_t a1 = decode_address(modes[0], memory, ip + 1);
-                size_t a2 = decode_address(modes[1], memory, ip + 2);
-                size_t a3 = decode_address(modes[2], memory, ip + 3);
+                size_t a1 = decode_address(modes[0], memory, rb, ip + 1);
+                size_t a2 = decode_address(modes[1], memory, rb, ip + 2);
+                size_t a3 = decode_address(modes[2], memory, rb, ip + 3);
                 if (memory[a1] == memory[a2]) {
                     memory[a3] = 1;
                 } else {
@@ -284,7 +289,7 @@ intcode_run(IntcodeProgram *program)
 
         case OPCODE_ADJUST_RELBASE:
             {
-                size_t a1 = decode_address(modes[0], memory, ip + 1);
+                size_t a1 = decode_address(modes[0], memory, rb, ip + 1);
                 program->rb += memory[a1];
                 program->ip += 2;
             }
