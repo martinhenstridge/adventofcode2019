@@ -144,7 +144,7 @@ compare_rays(const void *a, const void *b)
 
 
 static size_t
-find_rays(const char *map, Point base, Ray *rays)
+find_ordered_rays(const char *map, Point base, Ray *rays)
 {
     size_t count = 0;
 
@@ -172,13 +172,13 @@ find_rays(const char *map, Point base, Ray *rays)
         }
     }
 
-
+    qsort(rays, count, sizeof(Ray), compare_rays);
     return count;
 }
 
 
 static size_t
-vaporise_clockwise(char *map, Point base, Ray *rays, size_t ray_count, size_t target)
+vaporise200(char *map, Point base, Ray *rays, size_t ray_count)
 {
     size_t count = 0;
 
@@ -188,7 +188,7 @@ vaporise_clockwise(char *map, Point base, Ray *rays, size_t ray_count, size_t ta
             if (asteroid(map, p)) {
                 vaporise(map, p);
                 ++count;
-                if (count == target) {
+                if (count == 200) {
                     return p.r + 100 * p.c;
                 }
                 break;
@@ -229,9 +229,8 @@ solve10(const char *input)
     size_t asteroid200 = 0;
 
     rays = malloc(rows * cols * sizeof(Ray));
-    ray_count = find_rays(map, base, rays);
-    qsort(rays, ray_count, sizeof(Ray), compare_rays);
-    asteroid200 = vaporise_clockwise(map, base, rays, ray_count, 200);
+    ray_count = find_ordered_rays(map, base, rays);
+    asteroid200 = vaporise200(map, base, rays, ray_count);
 
     printf("[10/1] %li\n", visible);
     printf("[10/2] %li\n", asteroid200);
